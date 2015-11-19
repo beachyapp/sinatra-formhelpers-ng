@@ -12,19 +12,22 @@ module Sinatra
     #
     # etc.
     def form(action, method=:get, options={}, &block)
-      method_input = ''
-      # the docs suggest using ':create', ':update', or ':delete'
-      # but you can use any symbol for the method value
-      # allows for more than 3 forms on a single page
-      if method.is_a? Symbol
-        method_input = %Q(<input type="hidden" name="_method" value="#{method}" />)
-        method = :post
-      end
-      action = "/#{action}" if action.is_a? Symbol
+      fail '`form` requires a block be given' unless block_given?
 
-      out = tag(:form, nil, {:action => action, :method => method.to_s.upcase}.merge(options)) + method_input
-      out << fieldset(action, &block) + '</form>' if block_given?
-      out
+      options = {
+        action: action,
+        method: method.to_s.upcase
+      }.merge(options)
+
+      haml_tag(:form, options) do
+        haml_tag(
+          :input,
+          type:  'hidden',
+          name:  '_method',
+          value: method
+        )
+        yield
+      end
     end
 
     def fieldset(obj, legend=nil, &block)
@@ -91,13 +94,30 @@ module Sinatra
       join = options.delete(:join) || ' '
       labs = options.delete(:label)
       vals = param_or_default(obj, field, [])
+      chkd = options.delete(:checked) || []
       ary = values.is_a?(Array) && values.length > 1 ? '[]' : ''
       Array(values).collect do |val|
         id, text = id_and_text_from_value(val)
-        single_tag(:input, options.merge(:type => "checkbox", :id => css_id(obj, field, id),
-                                         :name => "#{obj}[#{field}]#{ary}", :value => id,
-                                         :checked => vals.include?(id) ? 'checked' : nil)) +
-        (labs.nil? || labs == true ? label(obj, "#{field}_#{id.to_s.downcase}", text) : '')
+        if labs.nil? || labs == true
+          this_labs = label(obj, "#{field}_#{id.to_s.downcase}", text)
+        else
+          this_labs = ''
+        end
+        if vals.include?(id) || chkd.include?(id)
+          this_checked = 'checked'
+        else
+          this_checked = nil
+        end
+        single_tag(
+          :input,
+          options.merge(
+            type:    'checkbox',
+            id:      css_id(obj, field, id),
+            name:    "#{obj}[#{field}]#{ary}",
+            value:   id,
+            checked: this_checked
+          )
+        ) + this_labs
       end.join(join)
     end
 
