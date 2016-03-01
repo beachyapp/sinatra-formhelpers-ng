@@ -144,7 +144,7 @@ module Sinatra
       Array(values).each do |val|
         id, text = id_and_text_from_value(val)
         tag_options = { :value => id }
-        tag_options[:selected] = 'selected' if id == value
+        tag_options[:selected] = 'selected' if id.to_i == value.to_i
         content << tag(:option, text, tag_options)
       end
       tag :select, content, options.merge(:id => css_id(obj, field), :name => "#{obj}[#{field}]")
